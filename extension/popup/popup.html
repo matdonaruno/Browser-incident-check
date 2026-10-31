@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>入力監査ログ</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <label class="toggle"><input type="checkbox" id="enabled"> 記録する</label>
+    <span id="count"></span>
+  </header>
+  <div class="bar">
+    <select id="filter">
+      <option value="all">すべて</option>
+      <option value="flagged">機密らしきもののみ</option>
+      <option value="submit">送信のみ</option>
+      <option value="paste">貼り付けのみ</option>
+    </select>
+    <button id="export-json">JSON</button>
+    <button id="export-csv">CSV</button>
+    <button id="clear" class="danger">全削除</button>
+  </div>
+  <details class="hosts"><summary>値を記録するサイト <span id="host-count"></span></summary><div class="hostbar"><input id="host-input" placeholder="example.jp"><button id="host-add">追加</button><button id="host-current">表示中のサイト</button></div><ul id="host-list"></ul></details>
+  <ul id="list"></ul>
+  <p class="note">上の「値を記録するサイト」に追加したサイトでだけ入力値を保存します。それ以外は文字数と種別のみ。パスワード欄は常に対象外。すべてこの端末内に保存します。</p>
+  <script src="popup.js"></script>
+</body>
+</html>
