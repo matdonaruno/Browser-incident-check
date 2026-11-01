@@ -4,6 +4,9 @@
 // パスワード欄は許可リストに関係なく常に値を扱わない。
 (function () {
   const DEBOUNCE_MS = 800;
+  // ページ側が巨大な値を入れてもログを膨らませないための上限
+  const VALUE_MAX = 2000;
+  const SNAPSHOT_MAX_ROWS = 300;
   const timers = new WeakMap();
   const lastValue = new WeakMap();
   let enabled = true;
@@ -59,6 +62,10 @@
     return typeof s === "string" ? s.trim().slice(0, n) : "";
   }
 
+  function cap(s) {
+    return typeof s === "string" ? s.slice(0, VALUE_MAX) : s;
+  }
+
   function describe(el) {
     let label = "";
     try {
@@ -106,8 +113,8 @@
       detected: value === null ? [] : AuditDetect.detectKinds(value)
     };
     if (value !== null && recordValues()) {
-      entry.value = value;
-      entry.prev = lastValue.has(el) ? lastValue.get(el) : null;
+      entry.value = cap(value);
+      entry.prev = lastValue.has(el) ? cap(lastValue.get(el)) : null;
       entry.field.context = rowContext(el);
       lastValue.set(el, value);
     }
@@ -119,6 +126,7 @@
     const els = root && root.elements ? Array.from(root.elements) : Array.from(document.querySelectorAll("input,textarea,select"));
     const rows = [];
     for (const el of els) {
+      if (rows.length >= SNAPSHOT_MAX_ROWS) break;
       if (isPassword(el)) continue;
       const type = el.tagName === "INPUT" ? (el.type || "text").toLowerCase() : "";
       if (["button", "submit", "reset", "image", "file", "hidden"].includes(type)) continue;
@@ -126,7 +134,7 @@
       const checkable = type === "checkbox" || type === "radio";
       rows.push({
         field: { ...describe(el), context: rowContext(el) },
-        value: checkable ? (el.checked ? el.value : "") : el.value,
+        value: cap(checkable ? (el.checked ? el.value : "") : el.value),
         checked: checkable ? el.checked : undefined
       });
     }
@@ -136,7 +144,7 @@
   document.addEventListener(
     "input",
     (e) => {
-      if (!enabled) return;
+      if (!e.isTrusted || !enabled) return;
       const el = targetOf(e);
       if (!isTextTarget(el)) return;
       clearTimeout(timers.get(el));
@@ -151,7 +159,7 @@
   document.addEventListener(
     "paste",
     (e) => {
-      if (!enabled) return;
+      if (!e.isTrusted || !enabled) return;
       const el = targetOf(e);
       if (!isTextTarget(el)) return;
       const text = e.clipboardData ? e.clipboardData.getData("text/plain") : "";
@@ -162,7 +170,7 @@
         detected: isPassword(el) ? [] : AuditDetect.detectKinds(text)
       };
       if (!isPassword(el) && recordValues()) {
-        entry.value = text;
+        entry.value = cap(text);
         entry.field.context = rowContext(el);
       }
       send(entry);
@@ -174,7 +182,7 @@
   document.addEventListener(
     "change",
     (e) => {
-      if (!enabled || !recordValues()) return;
+      if (!e.isTrusted || !enabled || !recordValues()) return;
       const el = targetOf(e);
       if (!el || el.nodeType !== 1 || isPassword(el)) return;
       const type = el.tagName === "INPUT" ? (el.type || "text").toLowerCase() : "";
@@ -185,7 +193,7 @@
         field: { ...describe(el), context: rowContext(el) },
         length: null,
         detected: [],
-        value: el.checked ? el.value : "",
+        value: cap(el.checked ? el.value : ""),
         checked: el.checked
       });
     },
@@ -196,7 +204,7 @@
   document.addEventListener(
     "click",
     (e) => {
-      if (!enabled || !recordValues()) return;
+      if (!e.isTrusted || !enabled || !recordValues()) return;
       const el = targetOf(e);
       const btn = el && el.closest ? el.closest("button, input[type=submit], input[type=button]") : null;
       if (!btn) return;
@@ -214,7 +222,7 @@
   document.addEventListener(
     "submit",
     (e) => {
-      if (!enabled) return;
+      if (!e.isTrusted || !enabled) return;
       const form = e.target;
       if (!form || form.tagName !== "FORM") return;
       let actionOrigin = "";

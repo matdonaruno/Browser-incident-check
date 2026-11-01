@@ -18,7 +18,7 @@
 | 機密らしさの種別 (creditCard / apiKey / privateKey / jwt / email / phoneJP / digits12) | |
 | 送信先オリジン、別オリジン送信・非HTTPS送信の有無 | |
 
-保存先は `chrome.storage.local` のみ (最大5000件、超過分は古い順に削除)。外部送信はありません。
+保存先は `chrome.storage.local` のみ (最大5000件・約8MB、超過分は古い順に削除)。値は1項目2000文字、スナップショットは300欄で切り詰める。外部送信はありません。
 
 ## インストール (開発版)
 
@@ -30,11 +30,12 @@
 ## テスト
 
 ```bash
-node --test tests/detect.test.js
+node --test tests/detect.test.js tests/background.test.js tests/content.test.js
 ```
 
 ## 制限
 
 - 検出は正規表現ベースで、誤検知・見逃しがあります (`digits12` は特に誤検知しやすい)。
 - 入力イベントは 800ms デバウンスして 1 欄 1 件にまとめます。キー単位の記録はしません。
+- ページのスクリプトが作った偽イベント (`isTrusted` でないもの) は記録しない。そのため `form.requestSubmit()` 等で JS が送信するサイトでは submit は残らず、送信ボタンの実クリック (スナップショット付き) が残る。
 - `fetch` / XHR による JS からの送信は捕捉しません (フォームの submit のみ)。
