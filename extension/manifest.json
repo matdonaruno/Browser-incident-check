@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "入力監査ログ (Input Audit)",
-  "version": "0.1.0",
-  "description": "ブラウザでの入力・貼り付け・送信を、既定はメタデータのみ、許可したサイトでは入力値・修正履歴・送信時スナップショットも記録するローカル監査ツール。",
+  "version": "0.2.0",
+  "description": "ブラウザでの入力・貼り付け・送信を、既定はメタデータのみ、許可したサイトでは入力値・修正履歴・送信時スナップショットも記録するローカル監査ツール。許可サイトでは送信前ゲート（内容の一覧表示と確認）も行う。",
   "permissions": ["storage", "activeTab"],
   "background": { "service_worker": "background.js" },
   "content_scripts": [

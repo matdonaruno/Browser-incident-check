@@ -11,16 +11,19 @@
   const lastValue = new WeakMap();
   let enabled = true;
   let valueHosts = [];
+  let gateEnabled = true;
 
   try {
-    chrome.storage.local.get({ enabled: true, valueHosts: [] }, (v) => {
+    chrome.storage.local.get({ enabled: true, valueHosts: [], gateEnabled: true }, (v) => {
       enabled = v.enabled !== false;
       valueHosts = v.valueHosts || [];
+      gateEnabled = v.gateEnabled !== false;
     });
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== "local") return;
       if (changes.enabled) enabled = changes.enabled.newValue !== false;
       if (changes.valueHosts) valueHosts = changes.valueHosts.newValue || [];
+      if (changes.gateEnabled) gateEnabled = changes.gateEnabled.newValue !== false;
     });
   } catch (_) {
     enabled = false;
@@ -208,6 +211,7 @@
       const el = targetOf(e);
       const btn = el && el.closest ? el.closest("button, input[type=submit], input[type=button]") : null;
       if (!btn) return;
+      if (btn.closest && btn.closest("#ia-gate-root")) return; // ゲート自身のボタンは記録しない
       send({
         kind: "click",
         field: { tag: btn.tagName.toLowerCase(), type: (btn.type || "").toLowerCase(), name: clip(btn.getAttribute("name"), 60), id: clip(btn.id, 60), autocomplete: "", label: clip(btn.value || btn.innerText, 60) },
@@ -256,6 +260,149 @@
       };
       if (recordValues()) entry.snapshot = snapshotOf(form);
       send(entry);
+    },
+    true
+  );
+
+  // ===== 送信前ゲート (設計書 §5 / ロードマップ step 2) =====
+  // 値を記録するサイトでだけ、送信の直前に入力一式を並べて表示し、人が確認するまで送信させない。
+  // ゲートは判定しない (値の正しさは見ない)。表示・確認・キャンセルの事実だけを kind:"gate" でログに残す。
+  // L1 の警告・L2 の照合結果は、将来このゲートの中に表示する。
+  let gateOpen = false;
+  let bypassUntil = 0;
+  const SEND_RE = /(送信|確定|登録する|注文|購入手続き|申し込む|send|submit)/i;
+  const NOT_SEND_RE = /(確認へ|確認画面|一時保存|下書き|戻る|キャンセル|閉じる|修正)/;
+
+  function inGate(el) {
+    return !!(el && el.closest && el.closest("#ia-gate-root"));
+  }
+
+  function gateApplies() {
+    return enabled && gateEnabled && recordValues() && !gateOpen && Date.now() > bypassUntil;
+  }
+
+  function gateLog(phase, trigger, rows) {
+    send({
+      kind: "gate",
+      field: { tag: "gate", type: "", name: "", id: "", autocomplete: "", label: "" },
+      length: null,
+      detected: [],
+      gate: { phase, trigger, fieldCount: rows.length, emptyCount: rows.filter((r) => r.value === "").length }
+    });
+  }
+
+  function showGate({ rows, trigger, resume }) {
+    gateOpen = true;
+    gateLog("shown", trigger, rows);
+    const doc = document;
+    const root = doc.createElement("div");
+    root.id = "ia-gate-root";
+    root.style.cssText =
+      "position:fixed;inset:0;z-index:2147483647;background:rgba(15,25,35,.58);overflow:auto;padding:28px 16px;font-family:sans-serif;";
+    const panel = doc.createElement("div");
+    panel.style.cssText =
+      "background:#fff;color:#1c2733;max-width:880px;margin:0 auto;border-radius:10px;padding:20px 24px;font-size:14px;line-height:1.5;box-shadow:0 8px 40px rgba(0,0,0,.4);";
+    const title = doc.createElement("h2");
+    title.textContent = "送信前確認 ― 入力監査ログ";
+    title.style.cssText = "font-size:19px;margin:0 0 6px;";
+    const note = doc.createElement("p");
+    note.textContent = "送信される入力内容の一覧です。中身を確認してから送信してください。（このゲートは値の正しさは判定しません。最終判断は人です）";
+    note.style.cssText = "margin:0 0 4px;color:#45525e;";
+    const stats = doc.createElement("p");
+    const empty = rows.filter((r) => r.value === "").length;
+    stats.textContent = `${rows.length} 欄の入力があります（未入力 ${empty} 欄）。`;
+    stats.style.cssText = "margin:0 0 12px;font-weight:bold;";
+    const table = doc.createElement("table");
+    table.style.cssText = "border-collapse:collapse;width:100%;margin-bottom:16px;";
+    for (const r of rows) {
+      const tr = doc.createElement("tr");
+      const k = doc.createElement("td");
+      const f = r.field || {};
+      k.textContent = f.context || f.label || f.name || f.id || f.tag;
+      k.style.cssText = "border:1px solid #c3ced8;padding:5px 9px;background:#eef4fa;width:46%;word-break:break-all;";
+      const v = doc.createElement("td");
+      v.textContent = r.checked === undefined ? (r.value === "" ? "（未入力）" : r.value) : r.checked ? `☑ ${r.value}` : "☐";
+      v.style.cssText = "border:1px solid #c3ced8;padding:5px 9px;word-break:break-all;";
+      tr.append(k, v);
+      table.appendChild(tr);
+    }
+    const bar = doc.createElement("div");
+    bar.style.cssText = "display:flex;gap:12px;justify-content:flex-end;";
+    const cancelBtn = doc.createElement("button");
+    cancelBtn.textContent = "戻って修正する";
+    cancelBtn.style.cssText = "padding:10px 18px;font-size:14px;border:1px solid #8a99a8;border-radius:6px;background:#fff;cursor:pointer;";
+    const confirmBtn = doc.createElement("button");
+    confirmBtn.textContent = "確認して送信する";
+    confirmBtn.style.cssText = "padding:10px 18px;font-size:14px;border:0;border-radius:6px;background:#14507e;color:#fff;font-weight:bold;cursor:pointer;";
+    bar.append(cancelBtn, confirmBtn);
+    panel.append(title, note, stats, table, bar);
+    root.appendChild(panel);
+
+    function close(phase) {
+      document.removeEventListener("keydown", onKey, true);
+      root.remove();
+      gateOpen = false;
+      gateLog(phase, trigger, rows);
+      if (phase === "confirmed") {
+        bypassUntil = Date.now() + 3000;
+        resume();
+      }
+    }
+    function onKey(e) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close("cancelled");
+      }
+    }
+    document.addEventListener("keydown", onKey, true);
+    cancelBtn.addEventListener("click", () => close("cancelled"));
+    confirmBtn.addEventListener("click", () => close("confirmed"));
+    (document.body || document.documentElement).appendChild(root);
+    confirmBtn.focus();
+  }
+
+  // フォーム送信は submit イベントでゲートする
+  document.addEventListener(
+    "submit",
+    (e) => {
+      if (!e.isTrusted || !gateApplies()) return;
+      const form = e.target;
+      if (!form || form.tagName !== "FORM") return;
+      e.preventDefault();
+      e.stopPropagation();
+      const submitter = e.submitter || null;
+      showGate({
+        rows: snapshotOf(form),
+        trigger: "submit",
+        resume: () => {
+          try {
+            if (submitter) form.requestSubmit(submitter);
+            else form.requestSubmit();
+          } catch (_) {}
+        }
+      });
+    },
+    true
+  );
+
+  // JS 送信 (submit イベントが出ない送信ボタン) は click でゲートする。
+  // フォームに属する submit ボタンは submit イベント側に任せて二重ゲートを避ける。
+  document.addEventListener(
+    "click",
+    (e) => {
+      if (!e.isTrusted || !gateApplies()) return;
+      const el = targetOf(e);
+      if (!el || inGate(el)) return;
+      const btn = el.closest ? el.closest("button, input[type=submit], input[type=button]") : null;
+      if (!btn || inGate(btn)) return;
+      const btype = (btn.type || (btn.tagName === "BUTTON" ? "submit" : "")).toLowerCase();
+      const isSubmitControl = btype === "submit";
+      if (isSubmitControl && btn.form) return;
+      const label = clip(btn.value || btn.innerText || "", 60);
+      if (!SEND_RE.test(label) || NOT_SEND_RE.test(label)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      showGate({ rows: snapshotOf(btn.form), trigger: "click", resume: () => btn.click() });
     },
     true
   );

@@ -55,6 +55,10 @@ function render() {
       if (e.form.crossOrigin) parts.push("別オリジン送信");
       if (e.form.insecure) parts.push("非HTTPS");
     }
+    if (e.gate) {
+      const phase = { shown: "ゲート表示", confirmed: "確認して送信", cancelled: "キャンセル（戻って修正）" }[e.gate.phase] || e.gate.phase;
+      parts.push(phase, `${e.gate.fieldCount}欄`, `未入力${e.gate.emptyCount}欄`, `(${e.gate.trigger})`);
+    }
     meta.textContent = parts.join(" · ");
 
     li.append(r1, url, meta);
@@ -168,15 +172,17 @@ $("host-current").addEventListener("click", async () => {
 });
 
 async function load() {
-  const v = await chrome.storage.local.get({ logs: [], enabled: true, valueHosts: [] });
+  const v = await chrome.storage.local.get({ logs: [], enabled: true, valueHosts: [], gateEnabled: true });
   logs = v.logs;
   hosts = v.valueHosts;
   $("enabled").checked = v.enabled !== false;
+  $("gate-enabled").checked = v.gateEnabled !== false;
   renderHosts();
   render();
 }
 
 $("enabled").addEventListener("change", (e) => chrome.storage.local.set({ enabled: e.target.checked }));
+$("gate-enabled").addEventListener("change", (e) => chrome.storage.local.set({ gateEnabled: e.target.checked }));
 $("filter").addEventListener("change", render);
 $("export-json").addEventListener("click", () => download("input-audit.json", JSON.stringify(logs, null, 2), "application/json"));
 $("export-csv").addEventListener("click", () => download("input-audit.csv", toCsv(logs), "text/csv"));
