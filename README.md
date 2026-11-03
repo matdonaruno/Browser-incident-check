@@ -45,3 +45,9 @@ node --test tests/detect.test.js tests/background.test.js tests/content.test.js
 - 入力イベントは 800ms デバウンスして 1 欄 1 件にまとめます。キー単位の記録はしません。
 - ページのスクリプトが作った偽イベント (`isTrusted` でないもの) は記録しない。そのため `form.requestSubmit()` 等で JS が送信するサイトでは submit は残らず、送信ボタンの実クリック (スナップショット付き) が残る。
 - `fetch` / XHR による JS からの送信は捕捉しません (フォームの submit のみ)。
+
+## ライセンス
+
+Copyright (c) 2026 matdonaruno （たりファミリー）
+
+本ソフトウェアは [試用ライセンス (LICENSE)](LICENSE) のもとで公開されています。閲覧と、評価・試用目的でのインストール・使用は許可されますが、再配布・改変・商用利用は許可されていません。
