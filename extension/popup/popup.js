@@ -59,6 +59,11 @@ function render() {
       const phase = { shown: "ゲート表示", confirmed: "確認して送信", cancelled: "キャンセル（戻って修正）" }[e.gate.phase] || e.gate.phase;
       parts.push(phase, `${e.gate.fieldCount}欄`, `未入力${e.gate.emptyCount}欄`, `(${e.gate.trigger})`);
       if (e.gate.warningCount) parts.push(`警告${e.gate.warningCount}件`);
+      if (e.gate.collation) parts.push(`照合${e.gate.collation.covered}欄`, `不一致${e.gate.collation.mismatched}`, `入替疑い${e.gate.collation.swaps}`);
+    }
+    if (e.restore) {
+      const phase = { shown: "復元バナー表示", restored: "復元した", dismissed: "復元バナーを閉じた" }[e.restore.phase] || e.restore.phase;
+      parts.push(phase, `${e.restore.count}件`);
     }
     meta.textContent = parts.join(" · ");
 
@@ -187,6 +192,14 @@ $("gate-enabled").addEventListener("change", (e) => chrome.storage.local.set({ g
 $("filter").addEventListener("change", render);
 $("export-json").addEventListener("click", () => download("input-audit.json", JSON.stringify(logs, null, 2), "application/json"));
 $("export-csv").addEventListener("click", () => download("input-audit.csv", toCsv(logs), "text/csv"));
+$("open-panel").addEventListener("click", async () => {
+  try {
+    const win = await chrome.windows.getCurrent();
+    await chrome.sidePanel.open({ windowId: win.id });
+  } catch (_) {
+    // サイドパネルが開けない環境では何もしない
+  }
+});
 $("clear").addEventListener("click", () => {
   if (!confirm(`${logs.length} 件のログをすべて削除します。元に戻せません。`)) return;
   chrome.runtime.sendMessage({ type: "clear" }, () => load());

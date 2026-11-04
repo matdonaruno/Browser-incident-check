@@ -20,11 +20,12 @@
     </select>
     <button id="export-json">JSON</button>
     <button id="export-csv">CSV</button>
+    <button id="open-panel">サイドパネルを開く</button>
     <button id="clear" class="danger">全削除</button>
   </div>
   <details class="hosts"><summary>値を記録するサイト <span id="host-count"></span></summary><div class="hostbar"><input id="host-input" placeholder="example.jp"><button id="host-add">追加</button><button id="host-current">表示中のサイト</button></div><ul id="host-list"></ul></details>
   <ul id="list"></ul>
-  <p class="note">上の「値を記録するサイト」に追加したサイトでだけ入力値を保存します。それ以外は文字数と種別のみ。パスワード欄は常に対象外。すべてこの端末内に保存します。送信前ゲートは、値を記録するサイトで送信直前に入力一式の一覧を表示し、確認するまで送信を止めます（確認・キャンセルもログに残ります）。</p>
+  <p class="note">上の「値を記録するサイト」に追加したサイトでだけ入力値を保存します。それ以外は文字数と種別のみ。パスワード欄は常に対象外。すべてこの端末内に保存します。送信前ゲートは、値を記録するサイトで送信直前に入力一式の一覧を表示し、確認するまで送信を止めます（確認・キャンセルもログに残ります）。サイドパネルでは元データを取り込んで送信前ゲートで照合できます。</p>
   <script src="popup.js"></script>
 </body>
 </html>

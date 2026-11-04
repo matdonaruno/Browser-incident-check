@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>元データ照合 ― 入力監査ログ</title>
+  <link rel="stylesheet" href="popup/popup.css">
+  <style>
+    body { width: auto; }
+    textarea { width: 100%; box-sizing: border-box; font: 12px/1.5 ui-monospace, Menlo, monospace; }
+    h3 { margin: 0 0 6px; font-size: 13px; }
+    .sec { margin: 0 0 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-top: 1px solid var(--line); padding: 3px 4px; text-align: left; vertical-align: top; }
+    td input[type="text"] { width: 100%; box-sizing: border-box; }
+    td select { width: 100%; box-sizing: border-box; }
+    .fname { color: var(--muted); word-break: break-all; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>元データ照合 (L2)</strong>
+    <span id="sp-host"></span>
+  </header>
+  <p class="note">対象ホストの元データ (項目→値の正解表) を取り込み、入力欄との対応づけを保存します。元データと対応づけはこの端末内にだけ保存され、サイトへは送られません。送信前ゲートで入力値と照合します。</p>
+
+  <section class="sec">
+    <h3>1. 元データを取り込む</h3>
+    <textarea id="sp-input" rows="8" placeholder="「項目名… 値」の表を貼り付け (タブ・カンマ・空白区切り)。各行の最後の列を値、それ以外を項目キーとして読みます。&#10;例:&#10;グルコース 試料1&#9;92&#10;グルコース 試料2&#9;148"></textarea>
+    <div class="bar">
+      <button id="sp-load">読み込む</button>
+      <label>CSVファイル <input type="file" id="sp-file" accept=".csv,.tsv,.txt"></label>
+    </div>
+    <div id="sp-rows-wrap"></div>
+    <p><button id="sp-clear" class="danger">このホストの元データを消す</button></p>
+  </section>
+
+  <section class="sec">
+    <h3>2. 入力欄との対応づけ</h3>
+    <div class="bar">
+      <button id="sp-match">このタブの入力欄と対応づける</button>
+      <button id="sp-save-mapping">対応づけを保存</button>
+    </div>
+    <div id="sp-map-wrap"></div>
+  </section>
+
+  <script src="rules.js"></script>
+  <script src="collate.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
