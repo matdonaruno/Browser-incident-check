@@ -9,6 +9,8 @@
   const SNAPSHOT_MAX_ROWS = 300;
   const timers = new WeakMap();
   const lastValue = new WeakMap();
+  // L1 検査用に、このページでの直近の貼り付けを覚えておく (許可サイトでのみ値を持つ)
+  const recentPastes = [];
   let enabled = true;
   let valueHosts = [];
   let gateEnabled = true;
@@ -175,6 +177,13 @@
       if (!isPassword(el) && recordValues()) {
         entry.value = cap(text);
         entry.field.context = rowContext(el);
+        entry.prev = cap(readValue(el) || "");
+        recentPastes.push({
+          fieldKey: AuditRules.fieldKeyOf(entry.field),
+          text: cap(text),
+          prevValue: cap(readValue(el) || "")
+        });
+        if (recentPastes.length > 100) recentPastes.shift();
       }
       send(entry);
     },
@@ -264,10 +273,10 @@
     true
   );
 
-  // ===== 送信前ゲート (設計書 §5 / ロードマップ step 2) =====
+  // ===== 送信前ゲート (設計書 §5 / ロードマップ step 2-3) =====
   // 値を記録するサイトでだけ、送信の直前に入力一式を並べて表示し、人が確認するまで送信させない。
-  // ゲートは判定しない (値の正しさは見ない)。表示・確認・キャンセルの事実だけを kind:"gate" でログに残す。
-  // L1 の警告・L2 の照合結果は、将来このゲートの中に表示する。
+  // L1 ルール検査 (rules.js) の警告もここに表示し、警告がある場合は全件確認のチェックが入るまで送信させない。
+  // 警告は異常の兆候の提示であり、値の正しさは判定しない。表示・確認・キャンセルの事実を kind:"gate" でログに残す。
   let gateOpen = false;
   let bypassUntil = 0;
   const SEND_RE = /(送信|確定|登録する|注文|購入手続き|申し込む|send|submit)/i;
@@ -281,19 +290,27 @@
     return enabled && gateEnabled && recordValues() && !gateOpen && Date.now() > bypassUntil;
   }
 
-  function gateLog(phase, trigger, rows) {
+  function gateLog(phase, trigger, rows, warnings) {
     send({
       kind: "gate",
       field: { tag: "gate", type: "", name: "", id: "", autocomplete: "", label: "" },
       length: null,
       detected: [],
-      gate: { phase, trigger, fieldCount: rows.length, emptyCount: rows.filter((r) => r.value === "").length }
+      gate: {
+        phase,
+        trigger,
+        fieldCount: rows.length,
+        emptyCount: rows.filter((r) => r.value === "").length,
+        warningCount: warnings ? warnings.length : 0,
+        warningCodes: warnings ? warnings.map((w) => w.code) : []
+      }
     });
   }
 
   function showGate({ rows, trigger, resume }) {
     gateOpen = true;
-    gateLog("shown", trigger, rows);
+    const warnings = AuditRules.evaluate(rows, recentPastes);
+    gateLog("shown", trigger, rows, warnings);
     const doc = document;
     const root = doc.createElement("div");
     root.id = "ia-gate-root";
@@ -306,12 +323,39 @@
     title.textContent = "送信前確認 ― 入力監査ログ";
     title.style.cssText = "font-size:19px;margin:0 0 6px;";
     const note = doc.createElement("p");
-    note.textContent = "送信される入力内容の一覧です。中身を確認してから送信してください。（このゲートは値の正しさは判定しません。最終判断は人です）";
+    note.textContent = "送信される入力内容の一覧です。中身を確認してから送信してください。（警告は異常の兆候の提示で、値の正しさの判定ではありません。最終判断は人です）";
     note.style.cssText = "margin:0 0 4px;color:#45525e;";
     const stats = doc.createElement("p");
     const empty = rows.filter((r) => r.value === "").length;
     stats.textContent = `${rows.length} 欄の入力があります（未入力 ${empty} 欄）。`;
     stats.style.cssText = "margin:0 0 12px;font-weight:bold;";
+    const warnedRows = new Set(warnings.map((w) => w.fieldIndex));
+    let ack = null;
+    let warnBox = null;
+    if (warnings.length) {
+      const wbox = doc.createElement("div");
+      wbox.style.cssText = "background:#fff7e0;border:1px solid #d9a514;border-radius:6px;padding:10px 14px;margin:0 0 12px;";
+      const wh = doc.createElement("p");
+      wh.textContent = `⚠ 警告 ${warnings.length} 件（L1 ルール検査）`;
+      wh.style.cssText = "margin:0 0 6px;font-weight:bold;color:#7a5b00;";
+      wbox.appendChild(wh);
+      const ul = doc.createElement("ul");
+      ul.style.cssText = "margin:0;padding-left:20px;";
+      for (const w of warnings) {
+        const li = doc.createElement("li");
+        li.textContent = `${w.label} ― ${w.message}`;
+        ul.appendChild(li);
+      }
+      wbox.appendChild(ul);
+      const ackLabel = doc.createElement("label");
+      ackLabel.style.cssText = "display:block;margin-top:8px;font-weight:bold;";
+      ack = doc.createElement("input");
+      ack.type = "checkbox";
+      ack.id = "ia-gate-ack";
+      ackLabel.append(ack, doc.createTextNode(" 警告をすべて確認しました"));
+      wbox.appendChild(ackLabel);
+      warnBox = wbox;
+    }
     const table = doc.createElement("table");
     table.style.cssText = "border-collapse:collapse;width:100%;margin-bottom:16px;";
     for (const r of rows) {
@@ -323,6 +367,7 @@
       const v = doc.createElement("td");
       v.textContent = r.checked === undefined ? (r.value === "" ? "（未入力）" : r.value) : r.checked ? `☑ ${r.value}` : "☐";
       v.style.cssText = "border:1px solid #c3ced8;padding:5px 9px;word-break:break-all;";
+      if (warnedRows.has(rows.indexOf(r))) tr.style.cssText = "background:#fff7e0;";
       tr.append(k, v);
       table.appendChild(tr);
     }
@@ -335,14 +380,25 @@
     confirmBtn.textContent = "確認して送信する";
     confirmBtn.style.cssText = "padding:10px 18px;font-size:14px;border:0;border-radius:6px;background:#14507e;color:#fff;font-weight:bold;cursor:pointer;";
     bar.append(cancelBtn, confirmBtn);
-    panel.append(title, note, stats, table, bar);
+    if (warnings.length) {
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = ".45";
+      confirmBtn.style.cursor = "not-allowed";
+      ack.addEventListener("change", () => {
+        confirmBtn.disabled = !ack.checked;
+        confirmBtn.style.opacity = ack.checked ? "1" : ".45";
+        confirmBtn.style.cursor = ack.checked ? "pointer" : "not-allowed";
+      });
+    }
+    if (warnBox) panel.append(title, note, stats, warnBox, table, bar);
+    else panel.append(title, note, stats, table, bar);
     root.appendChild(panel);
 
     function close(phase) {
       document.removeEventListener("keydown", onKey, true);
       root.remove();
       gateOpen = false;
-      gateLog(phase, trigger, rows);
+      gateLog(phase, trigger, rows, warnings);
       if (phase === "confirmed") {
         bypassUntil = Date.now() + 3000;
         resume();

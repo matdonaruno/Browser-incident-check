@@ -58,6 +58,7 @@ function render() {
     if (e.gate) {
       const phase = { shown: "ゲート表示", confirmed: "確認して送信", cancelled: "キャンセル（戻って修正）" }[e.gate.phase] || e.gate.phase;
       parts.push(phase, `${e.gate.fieldCount}欄`, `未入力${e.gate.emptyCount}欄`, `(${e.gate.trigger})`);
+      if (e.gate.warningCount) parts.push(`警告${e.gate.warningCount}件`);
     }
     meta.textContent = parts.join(" · ");
 
