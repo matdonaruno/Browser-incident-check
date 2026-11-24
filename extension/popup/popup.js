@@ -1,4 +1,18 @@
 const $ = (id) => document.getElementById(id);
+const msg = (key, subs) => chrome.i18n.getMessage(key, subs) || key;
+
+// 静的な UI 文言を _locales のメッセージで置き換える (言語はブラウザの UI 言語に追随)
+function applyI18n() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const m = chrome.i18n.getMessage(el.getAttribute("data-i18n"));
+    if (m) el.textContent = m;
+  });
+  try {
+    document.documentElement.lang = chrome.i18n.getUILanguage();
+  } catch (_) {}
+}
+applyI18n();
+
 let logs = [];
 
 function matches(entry, filter) {
@@ -10,25 +24,26 @@ function matches(entry, filter) {
 function render() {
   const filter = $("filter").value;
   const rows = logs.filter((e) => matches(e, filter)).reverse();
-  $("count").textContent = `${rows.length} / ${logs.length} 件`;
+  $("count").textContent = msg("countShown", [String(rows.length), String(logs.length)]);
   const ul = $("list");
   ul.textContent = "";
   if (rows.length === 0) {
     const li = document.createElement("li");
     li.className = "empty";
-    li.textContent = "ログはありません";
+    li.textContent = msg("emptyLog");
     ul.appendChild(li);
     return;
   }
   for (const e of rows.slice(0, 300)) {
     const li = document.createElement("li");
     const flagged = e.detected && e.detected.length > 0;
-    if (flagged) li.className = "flagged";
+    const safeKind = String(e.kind || "").replace(/[^a-z0-9-]/gi, "").toLowerCase();
+    li.className = "entry e-" + safeKind + (flagged ? " flagged" : "");
 
     const r1 = document.createElement("div");
     r1.className = "row1";
     const kind = document.createElement("span");
-    kind.className = "kind";
+    kind.className = "kind k-" + safeKind;
     kind.textContent = e.kind;
     const time = document.createElement("span");
     time.className = "time";
@@ -49,15 +64,21 @@ function render() {
     meta.className = "meta";
     const f = e.field || {};
     const parts = [f.tag + (f.type ? `[${f.type}]` : ""), f.name || f.id, f.label].filter(Boolean);
-    if (e.length != null) parts.push(`${e.length}文字`);
+    if (e.length != null) parts.push(msg("lengthChars", [String(e.length)]));
     if (e.form) {
       parts.push(`→ ${e.form.actionOrigin}`);
-      if (e.form.crossOrigin) parts.push("別オリジン送信");
-      if (e.form.insecure) parts.push("非HTTPS");
+      if (e.form.crossOrigin) parts.push(msg("crossOrigin"));
+      if (e.form.insecure) parts.push(msg("insecureHttp"));
     }
     if (e.gate) {
-      const phase = { shown: "ゲート表示", confirmed: "確認して送信", cancelled: "キャンセル（戻って修正）" }[e.gate.phase] || e.gate.phase;
-      parts.push(phase, `${e.gate.fieldCount}欄`, `未入力${e.gate.emptyCount}欄`, `(${e.gate.trigger})`);
+      const phase = { shown: msg("gatePhaseShown"), confirmed: msg("gatePhaseConfirmed"), cancelled: msg("gatePhaseCancelled") }[e.gate.phase] || e.gate.phase;
+      parts.push(phase, msg("fieldsCount", [String(e.gate.fieldCount)]), msg("gateEmptyCount", [String(e.gate.emptyCount)]), `(${e.gate.trigger})`);
+      if (e.gate.warningCount) parts.push(msg("warningsCount", [String(e.gate.warningCount)]));
+      if (e.gate.collation) parts.push(msg("collationCovered", [String(e.gate.collation.covered)]), msg("collationMismatched", [String(e.gate.collation.mismatched)]), msg("collationSwaps", [String(e.gate.collation.swaps)]));
+    }
+    if (e.restore) {
+      const phase = { shown: msg("restorePhaseShown"), restored: msg("restorePhaseRestored"), dismissed: msg("restorePhaseDismissed") }[e.restore.phase] || e.restore.phase;
+      parts.push(phase, msg("itemsCount", [String(e.restore.count)]));
     }
     meta.textContent = parts.join(" · ");
 
@@ -73,7 +94,7 @@ function render() {
       }
       const cur = document.createElement("span");
       cur.className = "val";
-      cur.textContent = e.value === "" ? "(空)" : e.value;
+      cur.textContent = e.value === "" ? msg("emptyValue") : e.value;
       v.appendChild(cur);
       li.appendChild(v);
     }
@@ -82,7 +103,7 @@ function render() {
       const d = document.createElement("details");
       d.className = "snap";
       const sm = document.createElement("summary");
-      sm.textContent = `送信時の入力一式 (${e.snapshot.length}欄)`;
+      sm.textContent = msg("snapshotSummary", [String(e.snapshot.length)]);
       const tbl = document.createElement("table");
       tbl.className = "snap";
       for (const r of e.snapshot) {
@@ -145,7 +166,7 @@ function renderHosts() {
     const name = document.createElement("span");
     name.textContent = h;
     const rm = document.createElement("button");
-    rm.textContent = "削除";
+    rm.textContent = msg("btnDelete");
     rm.addEventListener("click", () => saveHosts(hosts.filter((x) => x !== h)));
     li.append(name, rm);
     ul.appendChild(li);
@@ -160,7 +181,7 @@ function saveHosts(next) {
 
 function addHost(raw) {
   const h = String(raw || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/[/:?#].*$/, "");
-  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(h) && h !== "localhost") return alert("ホスト名の形式で入力してください (例: example.jp)");
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(h) && h !== "localhost") return alert(msg("hostInvalid"));
   if (!hosts.includes(h)) saveHosts([...hosts, h]);
   $("host-input").value = "";
 }
@@ -186,8 +207,16 @@ $("gate-enabled").addEventListener("change", (e) => chrome.storage.local.set({ g
 $("filter").addEventListener("change", render);
 $("export-json").addEventListener("click", () => download("input-audit.json", JSON.stringify(logs, null, 2), "application/json"));
 $("export-csv").addEventListener("click", () => download("input-audit.csv", toCsv(logs), "text/csv"));
+$("open-panel").addEventListener("click", async () => {
+  try {
+    const win = await chrome.windows.getCurrent();
+    await chrome.sidePanel.open({ windowId: win.id });
+  } catch (_) {
+    // サイドパネルが開けない環境では何もしない
+  }
+});
 $("clear").addEventListener("click", () => {
-  if (!confirm(`${logs.length} 件のログをすべて削除します。元に戻せません。`)) return;
+  if (!confirm(msg("clearConfirm", [String(logs.length)]))) return;
   chrome.runtime.sendMessage({ type: "clear" }, () => load());
 });
 chrome.storage.onChanged.addListener((c, area) => {
