@@ -6,8 +6,8 @@ A local audit extension (Chrome / Edge, Manifest V3) that logs typing, pasting, 
 
 ## Want to try it?
 
-The finished v0.4.0 release is distributed on GitHub. It is not on the Chrome Web Store yet.
-Follow the **[installation guide (INSTALL.md)](INSTALL.md)** — just download the ZIP and load it into your browser (about 3 minutes).
+A trial build (v0.4.0) is distributed on GitHub. It is not on the Chrome Web Store yet.
+Follow the **[trial installation guide (INSTALL.md)](INSTALL.md)** — just download the ZIP and load it into your browser (about 3 minutes).
 Feedback and bug reports are welcome via Issues.
 
 ## Recording modes
@@ -65,4 +65,4 @@ node --test tests/detect.test.js tests/background.test.js tests/content.test.js 
 
 Copyright (c) 2026 matdonaruno (tari family)
 
-This software is published under the [trial license (LICENSE)](LICENSE). You may view it and install/use it for evaluation and trial purposes, but redistribution, modification, and commercial use are not permitted.
+This software is published under the [license (LICENSE)](LICENSE). Installation and use are free of charge, including use for business and commercial purposes. However, redistribution, sale, and distribution of modified versions are not permitted. The software is provided without warranty.

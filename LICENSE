@@ -1,20 +1,49 @@
-入力監査ログ (Input Audit) — 試用ライセンス
+入力監査ログ (Input Audit) — ライセンス
 
 Copyright (c) 2026 matdonaruno （たりファミリー）
 
-本ソフトウェア（ソースコード、ドキュメント、その他一切の付随ファイルを含む。以下「本ソフトウェア」）は、評価・試用の目的のために公開されています。
+本ソフトウェア（ソースコード、ドキュメント、その他一切の付随ファイルを含む。以下「本ソフトウェア」）は、以下の条件のもとで公開されています。
+
 
 
 - 本ソフトウェアを閲覧すること
-- 評価・試用を目的として、本ソフトウェアをダウンロードし、ご自身のブラウザにインストールして使用すること
+- 本ソフトウェアをダウンロードし、ご自身のブラウザにインストールして使用すること。個人利用・組織内利用を問わず、業務目的・商用目的での利用を含みます。使用は無償です
+- ご自身の利用のために、本ソフトウェアを変更すること
 
 
-- 本ソフトウェアの全部または一部の再配布（複製物を第三者へ渡すこと、他の場所へ再公開することを含む）
-- 本ソフトウェアの改変、派生物の作成、およびそれらの公開・配布
-- 本ソフトウェアの全部または一部を商用製品・サービスに組み込むこと、その他の商用利用
-- 本ソフトウェアの販売、貸与、再許諾（サブライセンス）
+
+- 本ソフトウェアの全部または一部の再配布（複製物を第三者へ渡すこと、他の場所へ再公開することを含む）。なお、公式の GitHub リポジトリおよび公式ストアから本ソフトウェアを入手することは、再配布には当たりません
+- 本ソフトウェアの販売（頒布の対価を得ること）
+- 改変した本ソフトウェア（派生物を含む）の公開・配布
+
 
 
 本ソフトウェアは「現状のまま」提供されるものであり、商品性、特定目的への適合性、権利非侵害性を含む、明示・黙示を問わずいかなる保証もありません。本ソフトウェアの使用または使用不能によって生じたいかなる損害についても、著作権者は責任を負いません。
 
 上記に明示されていない権利は、すべて著作権者に留保されます。本ライセンスの範囲を超える利用を希望する場合は、著作権者にお問い合わせください。
+
+---
+
+Input Audit — License (English translation; the Japanese text above is the authoritative version)
+
+Copyright (c) 2026 matdonaruno (tari family)
+
+This software (including source code, documentation, and all accompanying files; "the Software") is published under the following terms.
+
+Permitted:
+
+- Viewing the Software.
+- Downloading the Software and installing and using it in your own browser, free of charge. This includes use for business and commercial purposes, whether for personal use or use within an organization.
+- Modifying the Software for your own use.
+
+Prohibited:
+
+- Redistributing the Software, in whole or in part (including handing copies to third parties or republishing it elsewhere). Obtaining the Software from the official GitHub repository or official stores does not constitute redistribution.
+- Selling the Software (obtaining consideration for its distribution).
+- Publishing or distributing modified versions of the Software (including derivative works).
+
+No warranty:
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY DAMAGES ARISING FROM THE USE OF OR INABILITY TO USE THE SOFTWARE.
+
+All rights not expressly granted above are reserved by the copyright holder. If you wish to use the Software beyond the scope of this license, please contact the copyright holder.
