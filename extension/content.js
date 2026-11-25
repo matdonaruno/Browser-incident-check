@@ -502,13 +502,16 @@
       ackLabel.append(ack, doc.createTextNode(" " + msg("ackLabel", undefined, "警告・照合結果をすべて確認しました")));
       ackBox.appendChild(ackLabel);
     }
+    // 照合で元データの行キーが対応づいた欄は、試料などを区別できる照合側のラベル (行キー併記) を優先する
+    const collLabels = new Map();
+    if (collation) for (const r of collation.results) if (r.sourceKey) collLabels.set(r.fieldIndex, r.label);
     const table = doc.createElement("table");
     table.style.cssText = "border-collapse:collapse;width:100%;margin-bottom:16px;";
     for (const r of rows) {
       const tr = doc.createElement("tr");
       const k = doc.createElement("td");
       const f = r.field || {};
-      k.textContent = f.context || f.label || f.name || f.id || f.tag;
+      k.textContent = collLabels.get(rows.indexOf(r)) || f.context || f.label || f.name || f.id || f.tag;
       k.style.cssText = "border:1px solid #c3ced8;padding:5px 9px;background:#eef4fa;width:46%;word-break:break-all;";
       const v = doc.createElement("td");
       v.textContent = r.checked === undefined ? (r.value === "" ? msg("gateNoValue", undefined, "（未入力）") : r.value) : r.checked ? `☑ ${r.value}` : "☐";

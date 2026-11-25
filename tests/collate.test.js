@@ -189,3 +189,21 @@ test("collate: 対応のない欄は noSource、カバー率を計算する", ()
   assert.equal(summary.covered, 1);
   assert.equal(summary.coverage, 0.25);
 });
+
+test("collate: ラベルに元データの行キーを併記し、同名の欄 (試料1/試料2) を区別できる", () => {
+  const sourceMap = { "グルコース 試料1": "92", "グルコース 試料2": "148" };
+  const mapping = {
+    [AuditRules.fieldKeyOf(GLU1)]: "グルコース 試料1",
+    [AuditRules.fieldKeyOf(GLU2)]: "グルコース 試料2"
+  };
+  const { results } = Collate.collate([row(GLU1, "92"), row(GLU2, "999")], sourceMap, mapping);
+  assert.equal(results[0].label, "グルコース mg/dL（グルコース 試料1）");
+  assert.equal(results[1].label, "グルコース mg/dL（グルコース 試料2）");
+  assert.notEqual(results[0].label, results[1].label);
+});
+
+test("collate: 対応づけのない欄のラベルはフォーム側のまま", () => {
+  const { results } = Collate.collate([row(GLU1, "92")], {}, {});
+  assert.equal(results[0].status, "noSource");
+  assert.equal(results[0].label, "グルコース mg/dL");
+});

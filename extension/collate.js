@@ -192,7 +192,9 @@
     list.forEach((row, i) => {
       const fk = fieldKeyOf(row.field);
       const sk = map[fk];
-      const label = labelOf(row, i);
+      const formLabel = labelOf(row, i);
+      // 元データの行キーが対応づいている欄はキーを併記し、同名の欄 (試料1/試料2 等) を区別できるようにする
+      const label = sk && sk !== formLabel ? `${formLabel}（${sk}）` : formLabel;
       if (!sk || !(sk in src)) {
         results.push({ fieldIndex: i, fieldKey: fk, label, status: "noSource", sourceKey: sk || null });
         return;

@@ -308,6 +308,8 @@ $("sp-save-mapping").addEventListener("click", async () => {
   for (const [k, val] of Object.entries(mappingDraft)) if (val) m[k] = val;
   all[host] = m;
   await chrome.storage.local.set({ mappings: all });
+  const time = new Date().toLocaleTimeString(chrome.i18n.getUILanguage(), { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  setMapStatus(msg("spMappingSaved", [String(Object.keys(m).length), time]));
 });
 
 loadAll();
